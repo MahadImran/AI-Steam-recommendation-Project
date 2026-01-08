@@ -58,6 +58,37 @@ async def get_recommendation(file: UploadFile = File(...)):
     }
 
 @app.post("/like_game")
+async def like_game(request: Request):
+    data = await request.json()
+    appid = data.get("appid")
+    
+    # 1. Load the cache to find the game's tags
+    with open("games_cache.json", "r") as f:
+        cache = json.load(f)
+    
+    tags_to_boost = []
+    for game in cache:
+        if game['appid'] == appid:
+            tags_to_boost = game['tags']
+            break
+
+    # 2. Update the profile (This is the 'Training' part)
+    profile_path = "user_profile.json"
+    if not os.path.exists(profile_path):
+        profile = {"liked_tags": {}}
+    else:
+        with open(profile_path, "r") as f:
+            profile = json.load(f)
+
+    for tag in tags_to_boost:
+        profile['liked_tags'][tag] = profile['liked_tags'].get(tag, 0) + 1
+    
+    with open(profile_path, "w") as f:
+        json.dump(profile, f, indent=4)
+
+    return {"status": "AI Updated!"}
+
+@app.post("/like_game")
 async def like_game(appid: int):
     with open("games_cache.json", "r") as f:
         cache = json.load(f)
@@ -81,6 +112,17 @@ async def like_game(appid: int):
         
     return {"status": "AI Updated!"}
 
+@app.get("/is_new_user")
+async def is_new_user():
+    # If the profile doesn't exist or has no liked tags, they are new
+    profile_path = "user_profile.json"
+    if not os.path.exists(profile_path):
+        return {"new_user": True}
+    
+    with open(profile_path, "r") as f:
+        profile = json.load(f)
+        return {"new_user": len(profile.get("liked_tags", {})) == 0}
+    
 if __name__ == "__main__":
     import uvicorn
     # 0.0.0.0 makes it accessible to your other laptop on the same Wi-Fi!

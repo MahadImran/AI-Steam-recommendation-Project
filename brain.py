@@ -14,35 +14,31 @@ def get_game_tags(appid):
     return []
 
 def recommend_games(user_text, profile):
+    print(f"--- Analyzing: '{user_text}' ---")
+    
     with open("games_cache.json", "r") as f:
         cache = json.load(f)
 
     user_text = user_text.lower()
-    scored_games = []
+    scored_results = []
 
     for game in cache:
         score = 0
-        game_tags = game.get('tags', [])
-
-        for tag in game_tags:
-            # 1. High weight for what you just said
+        # 1. Match against current voice command (High Weight: +10)
+        for tag in game['tags']:
             if tag in user_text:
-                score += 10 
+                score += 10
             
-            # 2. Add weight from your 'trained' profile
-            score += profile['liked_tags'].get(tag, 0)
-
-            # 3. Penalty for things you hate
-            if tag in profile.get('disliked_tags', []):
-                score -= 20
+            # 2. Match against 'trained' profile (Historical Weight)
+            score += profile.get("liked_tags", {}).get(tag, 0)
 
         if score > 0:
-            game['final_score'] = score
-            scored_games.append(game)
-
-    # Sort by score so the "best" match is at the top
-    scored_games.sort(key=lambda x: x['final_score'], reverse=True)
-    return scored_games[:5] # Return top 5
+            game['score'] = score
+            scored_results.append(game)
+    
+    # Sort by the highest score so the "best" match is first
+    scored_results.sort(key=lambda x: x['score'], reverse=True)
+    return scored_results[:5]
 
 if __name__ == "__main__":
     # Test it with a fake transcription result

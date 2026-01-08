@@ -21,52 +21,75 @@
     </div>
 
     <script>
-        let mediaRecorder;
-        let audioChunks = [];
-        const btn = document.getElementById('recordBtn');
+    let mediaRecorder;
+    let audioChunks = [];
+    const btn = document.getElementById('recordBtn');
 
-        btn.onmousedown = async () => {
+    // 🎤 Fix: Use async/await properly for mic access
+    btn.onmousedown = async () => {
+        try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
+            
+            audioChunks = [];
             mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
             mediaRecorder.onstop = sendAudio;
-            audioChunks = [];
+            
             mediaRecorder.start();
             btn.innerText = "Listening...";
             btn.classList.add('recording');
-        };
+        } catch (err) {
+            console.error("Mic access denied or error:", err);
+            alert("Could not access microphone. Please check browser permissions.");
+        }
+    };
 
-        btn.onmouseup = () => {
+    btn.onmouseup = () => {
+        if (mediaRecorder && mediaRecorder.state !== "inactive") {
             mediaRecorder.stop();
             btn.innerText = "🎤 Hold to Speak";
             btn.classList.remove('recording');
-        };
+        }
+    };
 
-async function sendAudio() {
-    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-    const formData = new FormData();
-    formData.append('file', audioBlob, 'audio.wav');
+    async function sendAudio() {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+        const formData = new FormData();
+        formData.append('file', audioBlob, 'audio.wav');
 
-    const response = await fetch('/recommend', { method: 'POST', body: formData });
-    const data = await response.json();
-    
-    document.getElementById('transcription').innerText = "You said: " + data.transcription;
-    
-    // Clear the old list
-    const listDiv = document.getElementById('gameList');
-    listDiv.innerHTML = ""; 
+        const response = await fetch('/recommend', { method: 'POST', body: formData });
+        const data = await response.json();
+        
+        document.getElementById('transcription').innerText = "You said: " + data.transcription;
+        
+        const listDiv = document.getElementById('gameList');
+        listDiv.innerHTML = ""; 
 
-    // Create pretty links for each recommendation
-    data.recommendations.forEach(game => {
-        const item = document.createElement('div');
-        item.innerHTML = `
-            <div style="background: #1e1e1e; padding: 15px; margin: 10px; border-radius: 8px; border: 1px solid #333;">
-                <h2 style="margin: 0;"><a href="${game.link}" target="_blank" style="color: #ff4b2b; text-decoration: none;">${game.name}</a></h2>
-                <p style="color: #888; font-size: 0.9em;">Tags: ${game.tags.join(', ')}</p>
-            </div>
-        `;
-        listDiv.appendChild(item);
-    });
-}    </script>
+        // 🎯 Fix: Mapping the rich recommendation objects
+        data.recommendations.forEach(game => {
+            const item = document.createElement('div');
+            item.innerHTML = `
+                <div style="background: #1e1e1e; padding: 15px; margin: 10px; border-radius: 8px; border: 1px solid #333; text-align: left;">
+                    <h2 style="margin: 0;">
+                        <a href="${game.link}" target="_blank" style="color: #ff4b2b; text-decoration: none;">${game.name}</a>
+                    </h2>
+                    <p style="color: #888; font-size: 0.9em;">Tags: ${game.tags.join(', ')}</p>
+                    <button onclick="trainAI(${game.appid})" style="background: #444; color: white; border: none; padding: 8px 12px; cursor: pointer; border-radius: 4px; margin-top: 5px;">👍 Like (Train AI)</button>
+                </div>
+            `;
+            listDiv.appendChild(item);
+        });
+    }
+
+    async function trainAI(appid) {
+        const response = await fetch('/like_game', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ appid: appid })
+        });
+        const result = await response.json();
+        alert(result.status);
+    }    
+</script>
 </body>
 </html>

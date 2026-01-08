@@ -1,8 +1,13 @@
 {
     "liked_tags": {
-        "action": 5,
-        "free to play": 2,
-        "multiplayer": 3
+        "action": 7,
+        "free to play": 4,
+        "multiplayer": 3,
+        "massively multiplayer": 1,
+        "simulation": 1
     },
-    "disliked_tags": ["sports", "horror"]
+    "disliked_tags": [
+        "sports",
+        "horror"
+    ]
 }
