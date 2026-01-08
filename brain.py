@@ -34,10 +34,14 @@ def recommend_games(user_text, profile):
         # 4. Hybrid Layer: Add weight from your 'trained' profile
         profile_bonus = 0
         liked_tags = profile.get("liked_tags", {})
+        disliked_tags = profile.get("disliked_tags", []) # Get the dislikes!
         for tag in game.get('tags', []):
             # We scale the bonus so it doesn't completely overwhelm the AI's logic
-            profile_bonus += liked_tags.get(tag, 0) * 0.05
-            
+            profile_bonus += liked_tags.get(tag, 0) * 0.01
+            # We also penalize disliked tags
+            if tag in disliked_tags:
+                profile_bonus -= 0.02  # Penalize disliked tags
+
         final_score = semantic_score + profile_bonus
         
         # Only keep results that actually make sense
