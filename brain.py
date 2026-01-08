@@ -13,26 +13,36 @@ def get_game_tags(appid):
         return []
     return []
 
-def recommend_games(user_text):
-    print(f"--- Analyzing: '{user_text}' ---")
-    
-    # Load your local cache from Step 4
+def recommend_games(user_text, profile):
     with open("games_cache.json", "r") as f:
-        trending_games = json.load(f)
+        cache = json.load(f)
 
     user_text = user_text.lower()
-    matches = []
+    scored_games = []
 
-    # Check the first 10 trending games for a match (to keep it fast)
-    for game in trending_games[:10]:
-        tags = get_game_tags(game['appid'])
-        # Simple Logic: If a keyword like 'action' is in your speech and the tags
-        for tag in tags:
+    for game in cache:
+        score = 0
+        game_tags = game.get('tags', [])
+
+        for tag in game_tags:
+            # 1. High weight for what you just said
             if tag in user_text:
-                matches.append(game['appid'])
-                break
-    
-    return matches
+                score += 10 
+            
+            # 2. Add weight from your 'trained' profile
+            score += profile['liked_tags'].get(tag, 0)
+
+            # 3. Penalty for things you hate
+            if tag in profile.get('disliked_tags', []):
+                score -= 20
+
+        if score > 0:
+            game['final_score'] = score
+            scored_games.append(game)
+
+    # Sort by score so the "best" match is at the top
+    scored_games.sort(key=lambda x: x['final_score'], reverse=True)
+    return scored_games[:5] # Return top 5
 
 if __name__ == "__main__":
     # Test it with a fake transcription result

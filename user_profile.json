@@ -1,0 +1,8 @@
+{
+    "liked_tags": {
+        "action": 5,
+        "free to play": 2,
+        "multiplayer": 3
+    },
+    "disliked_tags": ["sports", "horror"]
+}

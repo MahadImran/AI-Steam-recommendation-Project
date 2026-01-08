@@ -55,6 +55,31 @@ async def get_recommendation(file: UploadFile = File(...)):
         "transcription": user_text,
         "recommendations": rich_results
     }
+
+@app.post("/like_game")
+async def like_game(appid: int):
+    with open("games_cache.json", "r") as f:
+        cache = json.load(f)
+    
+    # Find the game and its tags
+    tags_to_boost = []
+    for game in cache:
+        if game['appid'] == appid:
+            tags_to_boost = game['tags']
+            break
+
+    # Update the profile (The "Training" part)
+    with open("user_profile.json", "r+") as f:
+        profile = json.load(f)
+        for tag in tags_to_boost:
+            profile['liked_tags'][tag] = profile['liked_tags'].get(tag, 0) + 1
+        
+        f.seek(0)
+        json.dump(profile, f, indent=4)
+        f.truncate()
+        
+    return {"status": "AI Updated!"}
+
 if __name__ == "__main__":
     import uvicorn
     # 0.0.0.0 makes it accessible to your other laptop on the same Wi-Fi!
