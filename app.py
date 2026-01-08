@@ -20,40 +20,41 @@ async def index(request: Request):
 
 import json
 
+import json
+import os
+
+# Helper to ensure we always have a profile to read
+def get_user_profile():
+    profile_path = "user_profile.json"
+    if not os.path.exists(profile_path):
+        # Default starter profile if none exists
+        return {"liked_tags": {}, "disliked_tags": []}
+    with open(profile_path, "r") as f:
+        return json.load(f)
+
 @app.post("/recommend")
 async def get_recommendation(file: UploadFile = File(...)):
-    # 1. Save the incoming audio blob from the browser
+    # 1. Save the incoming audio
     temp_filename = "temp_upload.wav"
     with open(temp_filename, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    # 2. Transcribe using our existing Whisper model
-    # We define 'user_text' here so the next step can find it!
+    # 2. Transcribe
     segments, _ = model.transcribe(temp_filename)
     user_text = " ".join([s.text for s in segments])
     
-    # 3. Get ID list from our brain.py using the user_text we just made
-    recommended_appids = recommend_games(user_text)
+    # 3. GET THE PROFILE (This fixes the TypeError)
+    profile = get_user_profile()
     
-    # 4. Load the cache to find names and links
-    with open("games_cache.json", "r") as f:
-        cache = json.load(f)
+    # 4. Get scored recommendations using the profile
+    # Now it matches the new recommend_games(user_text, profile) signature
+    recommended_games_list = recommend_games(user_text, profile)
     
-    # 5. Create a list of rich game objects for the website
-    rich_results = []
-    for appid in recommended_appids:
-        for game in cache:
-            if game['appid'] == appid:
-                rich_results.append({
-                    "name": game['name'],
-                    "link": game['link'],
-                    "tags": game['tags']
-                })
-                break
-                
+    # 5. Format for the frontend
+    # Since the new brain.py returns full game objects, we can simplify this
     return {
         "transcription": user_text,
-        "recommendations": rich_results
+        "recommendations": recommended_games_list
     }
 
 @app.post("/like_game")
