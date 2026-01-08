@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Game Recs</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding-top: 50px; background: #121212; color: white; }
+        #recordBtn { padding: 20px 40px; font-size: 20px; cursor: pointer; border-radius: 50px; border: none; background: #ff4b2b; color: white; }
+        #recordBtn.recording { background: #333; }
+        #results { margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <h1>🎮 Steam AI Recommender</h1>
+    <p>Tell me what kind of game you're in the mood for!</p>
+    
+    <button id="recordBtn">🎤 Hold to Speak</button>
+    
+    <div id="results">
+        <h3 id="transcription"></h3>
+        <div id="gameList"></div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        const btn = document.getElementById('recordBtn');
+
+        btn.onmousedown = async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = sendAudio;
+            audioChunks = [];
+            mediaRecorder.start();
+            btn.innerText = "Listening...";
+            btn.classList.add('recording');
+        };
+
+        btn.onmouseup = () => {
+            mediaRecorder.stop();
+            btn.innerText = "🎤 Hold to Speak";
+            btn.classList.remove('recording');
+        };
+
+async function sendAudio() {
+    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+    const formData = new FormData();
+    formData.append('file', audioBlob, 'audio.wav');
+
+    const response = await fetch('/recommend', { method: 'POST', body: formData });
+    const data = await response.json();
+    
+    document.getElementById('transcription').innerText = "You said: " + data.transcription;
+    
+    // Clear the old list
+    const listDiv = document.getElementById('gameList');
+    listDiv.innerHTML = ""; 
+
+    // Create pretty links for each recommendation
+    data.recommendations.forEach(game => {
+        const item = document.createElement('div');
+        item.innerHTML = `
+            <div style="background: #1e1e1e; padding: 15px; margin: 10px; border-radius: 8px; border: 1px solid #333;">
+                <h2 style="margin: 0;"><a href="${game.link}" target="_blank" style="color: #ff4b2b; text-decoration: none;">${game.name}</a></h2>
+                <p style="color: #888; font-size: 0.9em;">Tags: ${game.tags.join(', ')}</p>
+            </div>
+        `;
+        listDiv.appendChild(item);
+    });
+}    </script>
+</body>
+</html>

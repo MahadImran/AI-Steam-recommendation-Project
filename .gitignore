@@ -1,0 +1,15 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Environment & API Keys
+.env
+
+# Data & Audio
+games_cache.json
+temp_upload.wav
+test.mp3
+
+# IDE
+.vscode/
