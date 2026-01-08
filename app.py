@@ -3,12 +3,15 @@ from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 from voice_test import model  # Import the model we already tested
 import os
-
+import json
 from brain import recommend_games
 
 app = FastAPI()
+class TextRequest(BaseModel):
+    text: str
 
 # Tell FastAPI where your HTML and CSS files are
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -123,6 +126,29 @@ async def is_new_user():
         profile = json.load(f)
         return {"new_user": len(profile.get("liked_tags", {})) == 0}
     
+# Helper to load the "trained" profile
+def get_user_profile():
+    profile_path = "user_profile.json"
+    if not os.path.exists(profile_path):
+        return {"liked_tags": {}, "disliked_tags": []}
+    with open(profile_path, "r") as f:
+        return json.load(f)
+
+@app.post("/recommend_text")
+async def recommend_text(request: TextRequest):
+    # 1. Get the trained profile
+    profile = get_user_profile()
+    
+    # 2. Use the same brain logic for semantic search
+    recommendations = recommend_games(request.text, profile)
+    
+    return {
+        "transcription": request.text,
+        "recommendations": recommendations
+    }
+
+# Your existing if __name__ == "__main__": block goes here
+
 if __name__ == "__main__":
     import uvicorn
     # 0.0.0.0 makes it accessible to your other laptop on the same Wi-Fi!

@@ -24,15 +24,21 @@ def fetch_trending_with_tags():
         detail_url = f"https://store.steampowered.com/api/appdetails?appids={appid}"
         try:
             res = requests.get(detail_url).json()
+            # Inside fetch_trending_with_tags loop
             if res[str(appid)]['success']:
                 data = res[str(appid)]['data']
                 genres = [g['description'].lower() for g in data.get('genres', [])]
+                
+                # NEW: Get the short description to help the AI understand the 'vibe'
+                short_description = data.get('short_description', '')
+                
                 detailed_games.append({
                     "appid": appid,
                     "name": data.get('name'),
                     "tags": genres,
+                    "description": short_description, # Save the summary!
                     "link": f"https://store.steampowered.com/app/{appid}"
-                })
+            })
         except:
             continue
         

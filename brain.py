@@ -1,46 +1,50 @@
 import json
-import requests
+import os
+from sentence_transformers import SentenceTransformer, util
 
-def get_game_tags(appid):
-    # This fetches the 'genres' and 'categories' from the Steam store
-    url = f"https://store.steampowered.com/api/appdetails?appids={appid}"
-    try:
-        data = requests.get(url).json()
-        if data[str(appid)]['success']:
-            genres = [g['description'].lower() for g in data[str(appid)]['data'].get('genres', [])]
-            return genres
-    except:
-        return []
-    return []
+# Load a lightweight AI model for semantic meaning
+# This will download the first time you run it (~80MB)
+model = SentenceTransformer('all-MiniLM-L6-v2')
 
 def recommend_games(user_text, profile):
-    print(f"--- Analyzing: '{user_text}' ---")
+    print(f"--- AI Semantic Analysis: '{user_text}' ---")
     
+    # Load your local cache created by steam_handler.py
+    if not os.path.exists("games_cache.json"):
+        return []
+        
     with open("games_cache.json", "r") as f:
         cache = json.load(f)
 
-    user_text = user_text.lower()
+    # 1. Encode the user's voice request into a semantic vector
+    user_embedding = model.encode(user_text, convert_to_tensor=True)
+    
     scored_results = []
 
     for game in cache:
-        score = 0
-        # 1. Match against current voice command (High Weight: +10)
-        for tag in game['tags']:
-            if tag in user_text:
-                score += 10
+        # 🎯 FIX: Combine tags AND the description for much better matching
+        # Now the AI will see words like "scary", "terrifying", or "zombies"
+        full_metadata = " ".join(game.get('tags', [])) + " " + game.get('description', '')
+        
+        game_embedding = model.encode(full_metadata, convert_to_tensor=True)
+        
+        # Semantic similarity score
+        semantic_score = util.cos_sim(user_embedding, game_embedding).item()
+        
+        # 4. Hybrid Layer: Add weight from your 'trained' profile
+        profile_bonus = 0
+        liked_tags = profile.get("liked_tags", {})
+        for tag in game.get('tags', []):
+            # We scale the bonus so it doesn't completely overwhelm the AI's logic
+            profile_bonus += liked_tags.get(tag, 0) * 0.05
             
-            # 2. Match against 'trained' profile (Historical Weight)
-            score += profile.get("liked_tags", {}).get(tag, 0)
-
-        if score > 0:
-            game['score'] = score
+        final_score = semantic_score + profile_bonus
+        
+        # Only keep results that actually make sense
+        if final_score > 0.2:
+            game['score'] = final_score
             scored_results.append(game)
     
-    # Sort by the highest score so the "best" match is first
-    scored_results.sort(key=lambda x: x['score'], reverse=True)
+    # Sort by the highest AI + Profile score
+    scored_results.sort(key=lambda x: x.get('score', 0), reverse=True)
     return scored_results[:5]
-
-if __name__ == "__main__":
-    # Test it with a fake transcription result
-    results = recommend_games("I want to play an Action game")
-    print(f"Recommended AppIDs: {results}")

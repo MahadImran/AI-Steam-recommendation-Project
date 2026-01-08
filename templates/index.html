@@ -10,10 +10,18 @@
     </style>
 </head>
 <body>
-    <h1>🎮 Steam AI Recommender</h1>
-    <p>Tell me what kind of game you're in the mood for!</p>
+<h1>🎮 Steam AI Recommender</h1>
+    <p>Tell me or type what kind of game you're in the mood for!</p>
     
     <button id="recordBtn">🎤 Hold to Speak</button>
+    
+    <div style="margin: 20px 0;">-- OR --</div>
+
+    <div id="textSearchSection">
+        <input type="text" id="userTextInput" placeholder="e.g., A dark co-op survival game..." 
+               style="padding: 10px; width: 300px; border-radius: 5px; border: 1px solid #333; background: #222; color: white;">
+        <button id="textSearchBtn" style="padding: 10px 20px; border-radius: 5px; cursor: pointer; background: #ff4b2b; color: white; border: none;">Search</button>
+    </div>
     
     <div id="results">
         <h3 id="transcription"></h3>
@@ -21,26 +29,24 @@
     </div>
 
     <script>
-    let mediaRecorder;
+let mediaRecorder;
     let audioChunks = [];
     const btn = document.getElementById('recordBtn');
 
-    // 🎤 Fix: Use async/await properly for mic access
+    // 1. Existing Voice Logic
     btn.onmousedown = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
-            
             audioChunks = [];
             mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
             mediaRecorder.onstop = sendAudio;
-            
             mediaRecorder.start();
             btn.innerText = "Listening...";
             btn.classList.add('recording');
         } catch (err) {
-            console.error("Mic access denied or error:", err);
-            alert("Could not access microphone. Please check browser permissions.");
+            console.error("Mic access denied:", err);
+            alert("Could not access microphone.");
         }
     };
 
@@ -52,21 +58,32 @@
         }
     };
 
-    async function sendAudio() {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-        const formData = new FormData();
-        formData.append('file', audioBlob, 'audio.wav');
+    // 2. NEW: Text Search Logic
+    document.getElementById('textSearchBtn').onclick = async () => {
+        const textInput = document.getElementById('userTextInput');
+        const text = textInput.value;
+        if (!text) return;
 
-        const response = await fetch('/recommend', { method: 'POST', body: formData });
+        document.getElementById('transcription').innerText = "Searching for: " + text;
+        document.getElementById('gameList').innerHTML = "AI is thinking...";
+
+        const response = await fetch('/recommend_text', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: text })
+        });
         const data = await response.json();
         
-        document.getElementById('transcription').innerText = "You said: " + data.transcription;
-        
+        // Use our shared function to show the games
+        renderGames(data.recommendations);
+    };
+
+    // 3. NEW: Shared Function to display results (used by both voice and text)
+    function renderGames(recommendations) {
         const listDiv = document.getElementById('gameList');
         listDiv.innerHTML = ""; 
 
-        // 🎯 Fix: Mapping the rich recommendation objects
-        data.recommendations.forEach(game => {
+        recommendations.forEach(game => {
             const item = document.createElement('div');
             item.innerHTML = `
                 <div style="background: #1e1e1e; padding: 15px; margin: 10px; border-radius: 8px; border: 1px solid #333; text-align: left;">
@@ -81,6 +98,21 @@
         });
     }
 
+    // 4. Updated Voice function to use the shared renderGames helper
+    async function sendAudio() {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+        const formData = new FormData();
+        formData.append('file', audioBlob, 'audio.wav');
+
+        const response = await fetch('/recommend', { method: 'POST', body: formData });
+        const data = await response.json();
+        
+        document.getElementById('transcription').innerText = "You said: " + data.transcription;
+        
+        // Use the shared helper here too!
+        renderGames(data.recommendations);
+    }
+
     async function trainAI(appid) {
         const response = await fetch('/like_game', {
             method: 'POST',
@@ -89,7 +121,7 @@
         });
         const result = await response.json();
         alert(result.status);
-    }    
+    }
 </script>
 </body>
 </html>
