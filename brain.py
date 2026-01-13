@@ -3,7 +3,7 @@ import os
 from sentence_transformers import SentenceTransformer, util
 
 # Load a lightweight AI model for semantic meaning
-# This will download the first time you run it (~80MB)
+# This will download the first time you run it 
 model = SentenceTransformer('all-MiniLM-L6-v2')
 
 def recommend_games(user_text, profile):
@@ -22,7 +22,7 @@ def recommend_games(user_text, profile):
     scored_results = []
 
     for game in cache:
-        # 🎯 FIX: Combine tags AND the description for much better matching
+        # Combine tags AND the description for much better matching
         # Now the AI will see words like "scary", "terrifying", or "zombies"
         full_metadata = " ".join(game.get('tags', [])) + " " + game.get('description', '')
         
@@ -36,7 +36,7 @@ def recommend_games(user_text, profile):
         liked_tags = profile.get("liked_tags", {})
         disliked_tags = profile.get("disliked_tags", []) # Get the dislikes!
         for tag in game.get('tags', []):
-            # We scale the bonus so it doesn't completely overwhelm the AI's logic
+            # Scale the bonus so it doesn't completely overwhelm the AI's logic
             profile_bonus += liked_tags.get(tag, 0) * 0.01
             # We also penalize disliked tags
             if tag in disliked_tags:
