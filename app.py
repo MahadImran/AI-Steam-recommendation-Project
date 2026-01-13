@@ -46,7 +46,7 @@ async def get_recommendation(file: UploadFile = File(...)):
     segments, _ = model.transcribe(temp_filename)
     user_text = " ".join([s.text for s in segments])
     
-    # 3. GET THE PROFILE (This fixes the TypeError)
+    # 3. GET THE PROFILE
     profile = get_user_profile()
     
     # 4. Get scored recommendations using the profile
@@ -146,10 +146,8 @@ async def recommend_text(request: TextRequest):
         "transcription": request.text,
         "recommendations": recommendations
     }
-
-# Your existing if __name__ == "__main__": block goes here
-
+    
 if __name__ == "__main__":
     import uvicorn
-    # 0.0.0.0 makes it accessible to your other laptop on the same Wi-Fi!
+   
     uvicorn.run(app, host="0.0.0.0", port=8000)
