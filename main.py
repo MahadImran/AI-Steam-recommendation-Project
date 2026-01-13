@@ -1,5 +1,5 @@
 import json
-from voice_test import model # Reuse the Whisper model from your other script
+from voice_test import model # Reuse the Whisper model other script
 from brain import recommend_games
 
 def run_app():
@@ -19,7 +19,7 @@ def run_app():
     user_text = user_text.lower()
     
     for game in cache:
-        # Check if any tag (like 'action') is in what you said
+        # Check if any tag (like 'action') is in what is said
         for tag in game['tags']:
             if tag in user_text:
                 print(f"🎯 Match Found: {game['name']}")
