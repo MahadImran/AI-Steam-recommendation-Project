@@ -12,7 +12,7 @@ def fetch_trending_with_tags():
     # 1. Get the trending list
     list_url = f"https://api.steampowered.com/ISteamChartsService/GetMostPlayedGames/v1/?key={API_KEY}"
     list_res = requests.get(list_url).json()
-    ranks = list_res.get("response", {}).get("ranks", [])[:50] # Let's do top 50
+    ranks = list_res.get("response", {}).get("ranks", [])[:50] # Top 50
 
     detailed_games = []
     
@@ -29,7 +29,7 @@ def fetch_trending_with_tags():
                 data = res[str(appid)]['data']
                 genres = [g['description'].lower() for g in data.get('genres', [])]
                 
-                # NEW: Get the short description to help the AI understand the 'vibe'
+                # Get the short description to help the AI understand the 'vibe'
                 short_description = data.get('short_description', '')
                 
                 detailed_games.append({
